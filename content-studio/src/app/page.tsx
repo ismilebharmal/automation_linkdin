@@ -1,15 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   apiBase,
-  fetchLlmHealth,
   fetchTopicAngles,
   fetchTrends,
   filterTrendsForRelevance,
   generateImage,
   generatePost,
-  type LlmHealthResult,
   type TopicAngle,
   type TrendItem,
 } from "@/lib/api";
@@ -20,6 +18,59 @@ const TONE_OPTIONS = [
   "friendly and approachable",
   "thought-leader / opinionated",
 ] as const;
+
+const btnPrimary =
+  "inline-flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-600/25 transition hover:from-sky-500 hover:to-indigo-500 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:from-sky-500 dark:to-indigo-600 dark:shadow-indigo-950/40 sm:px-5";
+
+const btnDark =
+  "inline-flex min-h-11 touch-manipulation items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:bg-sky-600 dark:hover:bg-sky-500 sm:px-5";
+
+const btnOutline =
+  "inline-flex min-h-11 touch-manipulation items-center justify-center rounded-xl border border-zinc-200 bg-white/90 px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800/90 dark:text-zinc-100 dark:hover:bg-zinc-700 sm:px-5";
+
+const btnSoft =
+  "inline-flex min-h-10 touch-manipulation items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-900 transition hover:bg-violet-100 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-200 dark:hover:bg-violet-900/50";
+
+const inputClass =
+  "mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-3 text-base text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/15 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-sky-400 dark:focus:ring-sky-400/20 sm:text-sm";
+
+const labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-200";
+
+function SectionCard({
+  step,
+  title,
+  subtitle,
+  children,
+}: {
+  step: number;
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-zinc-200/80 bg-white/90 p-4 shadow-sm shadow-zinc-200/40 backdrop-blur-sm dark:border-zinc-700/80 dark:bg-zinc-900/80 dark:shadow-none sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-sm font-bold text-white shadow-md shadow-sky-500/30"
+          aria-hidden
+        >
+          {step}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {title}
+          </h2>
+          {subtitle ? (
+            <p className="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+              {subtitle}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <div className="space-y-4">{children}</div>
+    </section>
+  );
+}
 
 export default function Home() {
   const [topics, setTopics] = useState(
@@ -39,18 +90,13 @@ export default function Home() {
   const [loadingImg, setLoadingImg] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  /** If true, /generate asks for image_prompt; if false, text-only schema. */
   const [includeImageIdeas, setIncludeImageIdeas] = useState(true);
-  /** Mirrors what the last successful generation used (for section 3 layout). */
   const [generatedWithImageIdeas, setGeneratedWithImageIdeas] = useState(true);
-  const [llmHealth, setLlmHealth] = useState<LlmHealthResult | null>(null);
-  const [loadingLlmCheck, setLoadingLlmCheck] = useState(false);
   const [angles, setAngles] = useState<TopicAngle[]>([]);
   const [selectedAngles, setSelectedAngles] = useState<Record<string, boolean>>(
     {}
   );
   const [loadingAngles, setLoadingAngles] = useState(false);
-  /** Full list from last successful fetch; used to restore after AI filter. */
   const [fullFetchedBackup, setFullFetchedBackup] = useState<TrendItem[] | null>(
     null
   );
@@ -79,7 +125,9 @@ export default function Home() {
     setError(null);
     const t = topics.trim();
     if (t.length < 3) {
-      setError("Enter a topic (at least 3 characters) before breaking it into angles.");
+      setError(
+        "Enter a topic (at least 3 characters) before breaking it into angles."
+      );
       return;
     }
     setLoadingAngles(true);
@@ -129,7 +177,7 @@ export default function Home() {
       .map((a) => a.search_query);
     if (angles.length > 0 && selectedQueries.length === 0) {
       setError(
-        "Select at least one angle below, or click “Clear AI angles” to search the raw topic only."
+        "Select at least one angle below, or clear AI angles to search the raw topic only."
       );
       return;
     }
@@ -211,20 +259,6 @@ export default function Home() {
     return items.filter((_, i) => selected[i]);
   }, [items, selected]);
 
-  const onCheckLlm = async () => {
-    setError(null);
-    setLoadingLlmCheck(true);
-    setLlmHealth(null);
-    try {
-      const h = await fetchLlmHealth();
-      setLlmHealth(h);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "LLM health request failed");
-    } finally {
-      setLoadingLlmCheck(false);
-    }
-  };
-
   const onGenerate = async () => {
     setError(null);
     if (selectedItems.length === 0) {
@@ -242,6 +276,7 @@ export default function Home() {
         items: selectedItems,
         tone,
         extra_instructions: extra,
+        system_prompt: systemPrompt.trim() || undefined,
         include_image_prompt: includeImageIdeas,
       });
       setPost(out.linkedin_post);
@@ -288,93 +323,77 @@ export default function Home() {
       : post;
 
   return (
-    <div className="min-h-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-10 sm:px-6">
-        <header className="space-y-2">
-          <p className="text-sm font-medium text-sky-700 dark:text-sky-400">
-            Assistive studio — you paste into LinkedIn yourself
+    <div className="min-h-full bg-gradient-to-b from-sky-50/80 via-white to-indigo-50/40 text-zinc-900 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950/40 dark:text-zinc-100">
+      <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6 pb-16 sm:gap-8 sm:px-6 sm:py-10 lg:max-w-3xl">
+        <header className="space-y-4 text-center sm:text-left">
+          <p className="text-xs font-semibold uppercase tracking-widest text-sky-600 dark:text-sky-400">
+            Copy & paste only
           </p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            AI LinkedIn content engine
+          <h1 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+            Turn trends into{" "}
+            <span className="bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent dark:from-sky-400 dark:to-indigo-400">
+              LinkedIn-ready
+            </span>{" "}
+            posts
           </h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Backend:{" "}
-            <code className="rounded bg-zinc-200/80 px-1.5 py-0.5 text-xs dark:bg-zinc-800">
-              {base}
-            </code>{" "}
-            (LangChain + FastAPI). No database.
+          <p className="mx-auto max-w-xl text-pretty text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 sm:mx-0">
+            Pull signals from news & dev communities, trim what matters with AI,
+            then draft in your voice. You stay in control of what goes live.
           </p>
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <button
-              type="button"
-              onClick={onCheckLlm}
-              disabled={loadingLlmCheck}
-              className="w-fit rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              {loadingLlmCheck ? "Checking chat model…" : "Test chat model (Gemini/OpenAI)"}
-            </button>
-            {llmHealth ? (
-              <p
-                className={`text-xs ${
-                  llmHealth.ok
-                    ? "text-emerald-700 dark:text-emerald-400"
-                    : "text-amber-800 dark:text-amber-300"
-                }`}
-              >
-                {llmHealth.ok
-                  ? `OK · ${llmHealth.provider ?? "?"} · ${llmHealth.model ?? "?"} · “${llmHealth.reply_preview ?? ""}”`
-                  : `Failed · ${llmHealth.provider ?? "?"} · ${llmHealth.error ?? "unknown"}`}
-              </p>
-            ) : null}
-          </div>
+          <details className="mx-auto max-w-xl rounded-xl border border-zinc-200/80 bg-white/60 px-3 py-2 text-left text-xs text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-400 sm:mx-0">
+            <summary className="cursor-pointer font-medium text-zinc-600 dark:text-zinc-300">
+              API connection (technical)
+            </summary>
+            <code className="mt-2 block break-all rounded-lg bg-zinc-100 px-2 py-1.5 text-[11px] text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+              {base}
+            </code>
+          </details>
         </header>
 
         {error ? (
           <div
-            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+            className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900/40 dark:bg-red-950/50 dark:text-red-100"
             role="alert"
           >
             {error}
           </div>
         ) : null}
 
-        <section className="space-y-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            1 · Topics
-          </h2>
-          <label className="block text-sm text-zinc-600 dark:text-zinc-400">
-            Your topic (e.g. <em>AI can save jobs</em>, or <em>Gemma 4 open models</em>)
+        <SectionCard
+          step={1}
+          title="What are you posting about?"
+          subtitle="Optional: break the topic into search angles, or go straight to fetching trends."
+        >
+          <label className={labelClass}>
+            Your topic
             <textarea
-              className="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-base text-zinc-900 outline-none ring-sky-500/40 focus:border-sky-500 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              rows={2}
+              className={`${inputClass} min-h-[5.5rem] resize-y`}
+              rows={3}
               value={topics}
               onChange={(e) => setTopics(e.target.value)}
+              placeholder="e.g. AI augmenting jobs, not replacing them"
+              autoComplete="off"
             />
           </label>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Flow: fetch trends from all sources, then in step 2 use{" "}
-            <span className="font-medium text-zinc-600 dark:text-zinc-300">
-              Keep topic-relevant (AI)
-            </span>{" "}
-            to trim the merged list. Optional: break the topic into angles first for richer search queries;
-            skip that to search the raw topic only.
+          <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            After you fetch, use <strong className="font-medium text-zinc-700 dark:text-zinc-300">Keep topic-relevant</strong> in step 2 to drop noise from the merged feed.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="button"
               onClick={onBreakTopic}
               disabled={loadingAngles}
-              className="rounded-lg border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-medium text-violet-900 hover:bg-violet-100 disabled:opacity-60 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200 dark:hover:bg-violet-950"
+              className={btnSoft}
             >
-              {loadingAngles ? "Breaking down topic…" : "Break topic into angles (AI)"}
+              {loadingAngles ? "Breaking down…" : "Break topic into angles (AI)"}
             </button>
             {angles.length > 0 ? (
               <button
                 type="button"
                 onClick={clearAngles}
-                className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                className={btnOutline}
               >
-                Clear AI angles
+                Clear angles
               </button>
             ) : null}
           </div>
@@ -382,36 +401,36 @@ export default function Home() {
             <div
               role="group"
               aria-label="Search angles"
-              className="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700"
+              className="space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-800/40"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                  Search angles (select any)
+                  Search angles
                 </span>
                 <button
                   type="button"
                   onClick={selectAllAngles}
-                  className="text-xs font-medium text-sky-700 underline-offset-2 hover:underline dark:text-sky-400"
+                  className="self-start text-sm font-semibold text-sky-600 hover:underline dark:text-sky-400"
                 >
                   Select all
                 </button>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {angles.map((a) => (
                   <li key={a.id}>
-                    <label className="flex cursor-pointer gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                    <label className="flex cursor-pointer gap-3 rounded-xl border border-transparent p-2 hover:bg-white dark:hover:bg-zinc-900/80">
                       <input
                         type="checkbox"
                         checked={!!selectedAngles[a.id]}
                         onChange={() => toggleAngle(a.id)}
-                        className="mt-0.5 h-4 w-4 rounded border-zinc-300"
+                        className="mt-1 h-5 w-5 shrink-0 rounded border-zinc-300 text-sky-600 focus:ring-sky-500"
                       />
-                      <span>
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                      <span className="min-w-0">
+                        <span className="block font-medium text-zinc-900 dark:text-zinc-100">
                           {a.label}
                         </span>
                         <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
-                          Search: {a.search_query}
+                          {a.search_query}
                         </span>
                       </span>
                     </label>
@@ -424,94 +443,91 @@ export default function Home() {
             type="button"
             onClick={onFetchTrends}
             disabled={loadingTrends}
-            className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-60 dark:bg-sky-600 dark:hover:bg-sky-500"
+            className={`${btnDark} w-full sm:w-auto`}
           >
             {loadingTrends ? "Fetching trends…" : "Fetch trends"}
           </button>
-        </section>
+        </SectionCard>
 
         {items.length > 0 ? (
-          <section className="space-y-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                2 · Pick sources
-              </h2>
-              <div className="flex flex-wrap items-center gap-2">
+          <SectionCard
+            step={2}
+            title="Pick sources & shape the draft"
+            subtitle={`${items.length} item${items.length === 1 ? "" : "s"} · ${selectedItems.length} selected`}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <button
+                type="button"
+                onClick={onAiFilterRelevance}
+                disabled={loadingFilter}
+                className={`${btnPrimary} w-full sm:w-auto`}
+              >
+                {loadingFilter ? "Filtering…" : "Keep topic-relevant (AI)"}
+              </button>
+              {hasAiFiltered && fullFetchedBackup ? (
                 <button
                   type="button"
-                  onClick={onAiFilterRelevance}
-                  disabled={loadingFilter}
-                  className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-900 transition hover:bg-sky-100 disabled:opacity-60 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-100 dark:hover:bg-sky-900/80"
+                  onClick={onRestoreFullFetch}
+                  className="w-full text-center text-sm font-semibold text-zinc-600 underline-offset-2 hover:underline sm:w-auto dark:text-zinc-400"
                 >
-                  {loadingFilter ? "Filtering…" : "Keep topic-relevant (AI)"}
+                  Show all {fullFetchedBackup.length} fetched
                 </button>
-                {hasAiFiltered && fullFetchedBackup ? (
-                  <button
-                    type="button"
-                    onClick={onRestoreFullFetch}
-                    className="text-xs font-medium text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
-                  >
-                    Show all {fullFetchedBackup.length} fetched
-                  </button>
-                ) : null}
+              ) : null}
+              <div className="flex w-full gap-2 sm:ml-auto sm:w-auto">
                 <button
                   type="button"
                   onClick={selectAll}
-                  className="text-xs font-medium text-sky-700 underline-offset-2 hover:underline dark:text-sky-400"
+                  className="min-h-11 flex-1 touch-manipulation rounded-xl border border-zinc-200 bg-white py-2.5 text-sm font-semibold text-sky-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-sky-300 dark:hover:bg-zinc-700 sm:flex-none sm:px-4"
                 >
                   Select all
                 </button>
                 <button
                   type="button"
                   onClick={clearSelection}
-                  className="text-xs font-medium text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
+                  className="min-h-11 flex-1 touch-manipulation rounded-xl border border-zinc-200 bg-white py-2.5 text-sm font-semibold text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 sm:flex-none sm:px-4"
                 >
                   Clear
                 </button>
               </div>
             </div>
             {filterNote ? (
-              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-950/50 dark:text-sky-100">
                 {filterNote}
               </p>
             ) : null}
             {filterUsedFallback ? (
-              <p className="text-xs text-amber-700 dark:text-amber-400">
-                Ranking used keyword overlap because the model returned no valid
-                picks — try again or shorten the topic.
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100">
+                Keyword fallback was used — try filtering again or shorten your topic.
               </p>
             ) : null}
-            <ul className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            <ul className="max-h-[min(28rem,55vh)] space-y-2 overflow-y-auto overscroll-y-contain pr-1 [-webkit-overflow-scrolling:touch]">
               {items.map((it, i) => (
                 <li key={`${it.source}-${i}`}>
-                  <label className="flex cursor-pointer gap-3 rounded-lg border border-zinc-100 p-2 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/60">
+                  <label className="flex cursor-pointer gap-3 rounded-xl border border-zinc-100 bg-zinc-50/50 p-3 transition hover:border-sky-200 hover:bg-white dark:border-zinc-800 dark:bg-zinc-800/30 dark:hover:border-sky-900 dark:hover:bg-zinc-800/60">
                     <input
                       type="checkbox"
                       checked={!!selected[i]}
                       onChange={() => toggle(i)}
-                      className="mt-1 h-4 w-4 rounded border-zinc-300"
+                      className="mt-0.5 h-5 w-5 shrink-0 rounded border-zinc-300 text-sky-600 focus:ring-sky-500"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      <span className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                         {it.title}
                       </span>
-                      <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
-                        {it.source}
+                      <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span>{it.source}</span>
                         {it.url ? (
-                          <>
-                            {" · "}
-                            <a
-                              href={it.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sky-700 underline-offset-2 hover:underline dark:text-sky-400"
-                            >
-                              link
-                            </a>
-                          </>
+                          <a
+                            href={it.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-sky-600 hover:underline dark:text-sky-400"
+                          >
+                            Open source
+                          </a>
                         ) : null}
                       </span>
-                      <span className="mt-1 block text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
+                      <span className="mt-2 block text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
                         {it.summary}
                       </span>
                     </span>
@@ -520,11 +536,11 @@ export default function Home() {
               ))}
             </ul>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm text-zinc-600 dark:text-zinc-400">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className={labelClass}>
                 Tone
                 <select
-                  className="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                  className={inputClass}
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
                 >
@@ -536,151 +552,148 @@ export default function Home() {
                 </select>
               </label>
             </div>
-            <label className="block text-sm text-zinc-600 dark:text-zinc-400">
-              System prompt add-on (optional)
+            <label className={labelClass}>
+              System style (optional)
               <textarea
-                className="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className={`${inputClass} min-h-[5rem] resize-y`}
                 rows={3}
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
-                placeholder="Appended to the model’s system message: voice, never say X, always include Y, audience, compliance notes…"
+                placeholder="Voice, audience, words to avoid, compliance — layered on the assistant’s system prompt"
               />
-              <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                This shapes how the assistant behaves for every generate click. Use{" "}
-                <span className="font-medium text-zinc-600 dark:text-zinc-300">
-                  Extra instructions
-                </span>{" "}
-                below for one-off tweaks for a single draft.
+              <span className="mt-1.5 block text-xs text-zinc-500 dark:text-zinc-400">
+                Applies every time you generate. Use “Extra notes” below for one-off tweaks.
               </span>
             </label>
-            <label className="block text-sm text-zinc-600 dark:text-zinc-400">
-              Extra instructions (optional)
+            <label className={labelClass}>
+              Extra notes (optional)
               <textarea
-                className="mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                className={`${inputClass} min-h-[4rem] resize-y`}
                 rows={2}
                 value={extra}
                 onChange={(e) => setExtra(e.target.value)}
-                placeholder="e.g. Mention my newsletter, keep under 200 words…"
+                placeholder="e.g. plug my newsletter, stay under 200 words"
               />
             </label>
-            <fieldset className="space-y-2 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-              <legend className="px-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <fieldset className="space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/50 p-4 dark:border-zinc-700 dark:bg-zinc-800/30">
+              <legend className="px-1 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                 Output
               </legend>
-              <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <label className="flex cursor-pointer items-start gap-3 text-sm text-zinc-700 dark:text-zinc-300">
                 <input
                   type="radio"
                   name="out-mode"
-                  className="mt-1"
+                  className="mt-1 h-4 w-4 text-sky-600 focus:ring-sky-500"
                   checked={includeImageIdeas}
                   onChange={() => setIncludeImageIdeas(true)}
                 />
                 <span>
-                  Post + image prompt (then you can use{" "}
-                  <strong className="font-medium">Generate image</strong> if you want a visual)
+                  Post + image prompt — then generate a visual if you want one
                 </span>
               </label>
-              <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <label className="flex cursor-pointer items-start gap-3 text-sm text-zinc-700 dark:text-zinc-300">
                 <input
                   type="radio"
                   name="out-mode"
-                  className="mt-1"
+                  className="mt-1 h-4 w-4 text-sky-600 focus:ring-sky-500"
                   checked={!includeImageIdeas}
                   onChange={() => setIncludeImageIdeas(false)}
                 />
-                <span>LinkedIn post only — no image prompt, no image generation</span>
+                <span>LinkedIn text only — no image ideas</span>
               </label>
             </fieldset>
             <button
               type="button"
               onClick={onGenerate}
               disabled={loadingGen}
-              className="rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-sky-500 disabled:opacity-60"
+              className={`${btnPrimary} w-full`}
             >
-              {loadingGen ? "Generating with LangChain…" : "Generate LinkedIn draft"}
+              {loadingGen ? "Drafting your post…" : "Generate LinkedIn draft"}
             </button>
-          </section>
+          </SectionCard>
         ) : null}
 
         {post ? (
-          <section className="space-y-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              3 · Copy for LinkedIn
-            </h2>
-            <div className="flex flex-wrap gap-2">
+          <SectionCard
+            step={3}
+            title="Your draft"
+            subtitle="Copy into LinkedIn when you’re happy with it."
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
                 onClick={() => copyText("post", postWithTags)}
-                className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-medium dark:border-zinc-600 dark:bg-zinc-800"
+                className={`${btnOutline} w-full sm:w-auto`}
               >
-                {copied === "post" ? "Copied" : "Copy post + hashtags"}
+                {copied === "post" ? "Copied ✓" : "Copy post + hashtags"}
               </button>
               <button
                 type="button"
                 onClick={() => copyText("body", post)}
-                className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-medium dark:border-zinc-600 dark:bg-zinc-800"
+                className={`${btnOutline} w-full sm:w-auto`}
               >
-                {copied === "body" ? "Copied" : "Copy body only"}
+                {copied === "body" ? "Copied ✓" : "Copy body only"}
               </button>
             </div>
-            <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-50 p-4 text-sm leading-relaxed text-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
+            <pre className="max-h-[min(24rem,50vh)] overflow-auto whitespace-pre-wrap rounded-xl border border-zinc-100 bg-zinc-50 p-4 text-sm leading-relaxed text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
               {postWithTags}
             </pre>
 
             {generatedWithImageIdeas ? (
               <>
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                    Image prompt (from model)
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                    Image prompt
                   </h3>
-                  <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                  <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
                     {imagePrompt}
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button
                       type="button"
                       onClick={() => copyText("img", imagePrompt)}
-                      className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-medium dark:border-zinc-600 dark:bg-zinc-800"
+                      className={`${btnOutline} w-full sm:w-auto`}
                     >
-                      {copied === "img" ? "Copied" : "Copy image prompt"}
+                      {copied === "img" ? "Copied ✓" : "Copy image prompt"}
                     </button>
                     <button
                       type="button"
                       onClick={onGenerateImage}
                       disabled={loadingImg || !imagePrompt.trim()}
-                      className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-500 disabled:opacity-60"
+                      className="inline-flex min-h-11 w-full touch-manipulation items-center justify-center rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:from-violet-500 hover:to-fuchsia-500 disabled:pointer-events-none disabled:opacity-50 sm:w-auto sm:px-5"
                     >
-                      {loadingImg ? "Generating image…" : "Generate image"}
+                      {loadingImg ? "Creating image…" : "Generate image"}
                     </button>
                   </div>
                 </div>
 
                 {imageUrl ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <img
                       src={imageUrl}
-                      alt="Generated visual for LinkedIn"
-                      className="w-full max-w-lg rounded-lg border border-zinc-200 dark:border-zinc-700"
+                      alt="Generated visual for your post"
+                      className="w-full max-w-lg rounded-xl border border-zinc-200 shadow-md dark:border-zinc-700"
+                      loading="lazy"
+                      decoding="async"
                     />
                     <a
                       href={imageUrl}
                       download="linkedin-visual.png"
                       target="_blank"
-                      rel="noreferrer"
-                      className="inline-block text-sm font-medium text-sky-700 underline-offset-2 hover:underline dark:text-sky-400"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-11 items-center text-sm font-semibold text-sky-600 hover:underline dark:text-sky-400"
                     >
-                      Open / save image
+                      Open or save image
                     </a>
                   </div>
                 ) : null}
               </>
             ) : (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                You chose <strong className="font-medium">post only</strong> — no image prompt was generated. Switch
-                output to “Post + image prompt” and run generate again if you want a visual.
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                You chose <strong className="text-zinc-700 dark:text-zinc-300">text only</strong>. Switch output to “Post + image prompt” and generate again if you want a visual.
               </p>
             )}
-          </section>
+          </SectionCard>
         ) : null}
       </main>
     </div>

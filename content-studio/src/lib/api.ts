@@ -88,23 +88,6 @@ export type GenerateResult = {
   hashtags: string[];
 };
 
-export type LlmHealthResult = {
-  ok: boolean;
-  provider: string | null;
-  model: string | null;
-  reply_preview: string | null;
-  error: string | null;
-};
-
-export async function fetchLlmHealth(): Promise<LlmHealthResult> {
-  const res = await fetch(`${apiBase()}/health/llm`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `LLM health failed (${res.status})`);
-  }
-  return res.json() as Promise<LlmHealthResult>;
-}
-
 export async function generatePost(body: {
   items: TrendItem[];
   tone: string;
