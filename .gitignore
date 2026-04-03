@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+
+# Python
+**/.venv/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# env / secrets (never commit)
+.env
+**/.env
+!.env.example
+!**/.env.example
+!**/env.example
+
+# Next.js
+content-studio/.next/
+content-studio/out/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
