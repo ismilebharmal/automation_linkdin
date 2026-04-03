@@ -1,9 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  /* Brand — sky + indigo (used for gradients & focus; tweak here to re-skin) */
+  --background: #fafafa;
+  --foreground: #0f172a;
   --brand-from: #0284c7;
   --brand-to: #4f46e5;
   --brand-muted: #64748b;
@@ -18,8 +17,75 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #030712;
+    --foreground: #f1f5f9;
+  }
+}
+
+/* Soft entrance — respects reduced motion */
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-rise {
+  animation: fade-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-rise {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Page mesh (light / dark) */
+.mesh-page {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 100% 80% at 50% -30%, rgb(14 165 233 / 0.14), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgb(99 102 241 / 0.1), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 0% 20%, rgb(14 165 233 / 0.06), transparent 45%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .mesh-page {
+    background-image:
+      radial-gradient(ellipse 100% 70% at 50% -25%, rgb(14 165 233 / 0.18), transparent 55%),
+      radial-gradient(ellipse 55% 45% at 100% 5%, rgb(99 102 241 / 0.14), transparent 50%),
+      radial-gradient(ellipse 45% 35% at 0% 25%, rgb(56 189 248 / 0.08), transparent 45%);
+  }
+}
+
+/* Scrollable lists */
+.scroll-pretty {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(161 161 170) transparent;
+}
+
+.scroll-pretty::-webkit-scrollbar {
+  width: 7px;
+}
+
+.scroll-pretty::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background-color: rgb(161 161 170);
+}
+
+@media (prefers-color-scheme: dark) {
+  .scroll-pretty {
+    scrollbar-color: rgb(82 82 91) transparent;
+  }
+
+  .scroll-pretty::-webkit-scrollbar-thumb {
+    background-color: rgb(82 82 91);
   }
 }
 
@@ -27,4 +93,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background-color: rgb(14 165 233 / 0.25);
+  color: inherit;
 }

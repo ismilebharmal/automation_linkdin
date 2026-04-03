@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { BrandBadge } from "@/components/brand-badge";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -38,14 +39,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-[var(--background)] text-[var(--foreground)]">
-        <header className="sticky top-0 z-40 border-b border-zinc-200/90 bg-white/85 backdrop-blur-md dark:border-zinc-800/90 dark:bg-zinc-950/85">
+        <header className="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/80 shadow-sm shadow-zinc-200/40 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/80 dark:shadow-black/20">
           <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 sm:px-6">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-xs font-bold tracking-tight text-white shadow-md shadow-sky-500/25"
-              aria-hidden
-            >
-              CS
-            </div>
+            <BrandBadge />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className="text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
